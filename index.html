@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vohidjon Avtomaktabi - Mashinalar Parki</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto:wght@400;700&display=swap');
+        body { margin: 0; background: #1a1a1a; color: white; font-family: 'Roboto', sans-serif; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; }
+        
+        #start-screen { background: #2d3436; padding: 25px; border-radius: 20px; border: 4px solid #f1c40f; text-align: center; box-shadow: 0 0 50px rgba(0,0,0,0.5); width: 400px; }
+        h1 { font-family: 'Orbitron', sans-serif; color: #f1c40f; font-size: 1.5rem; margin-bottom: 15px; }
+        input { padding: 10px; margin-bottom: 15px; border-radius: 8px; border: none; width: 80%; font-size: 1rem; text-align: center; }
+
+        .selector-title { margin: 10px 0; font-weight: bold; color: #00d4ff; font-size: 0.9rem; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 15px; }
+        
+        .option { padding: 8px; border-radius: 8px; cursor: pointer; border: 2px solid transparent; background: #3d4446; font-size: 0.8rem; transition: 0.2s; }
+        .option.active { border-color: #f1c40f; background: #4d5456; transform: scale(1.05); }
+
+        .btn-start { padding: 12px; background: #f1c40f; color: #1a1a1a; border: none; border-radius: 30px; cursor: pointer; font-weight: bold; font-size: 1.1rem; width: 100%; }
+        
+        canvas { background: #34495e; display: none; border: 8px solid #2c3e50; border-radius: 15px; cursor: none; }
+        #timer-display { position: absolute; top: 20px; background: rgba(0,0,0,0.8); padding: 10px 20px; border-radius: 30px; font-family: 'Orbitron'; font-size: 1.5rem; display: none; color: #f1c40f; border: 2px solid #f1c40f; }
+        #license { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 380px; background: white; border-radius: 15px; color: #2c3e50; padding: 20px; border: 5px solid #2980b9; box-shadow: 0 0 100px rgba(0,0,0,0.9); text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div id="timer-display">VAQT: <span id="seconds">30</span>s</div>
+
+    <div id="start-screen">
+        <h1>VOHIDJON AVTOMAKTABI</h1>
+        <input type="text" id="userName" placeholder="Ismingiz" required>
+        
+        <p class="selector-title">MASHINA TURINI TANLANG:</p>
+        <div class="grid" id="typeGrid">
+            <div class="option active" onclick="setType('sport', this)">🏎️ Poyga (Tez)</div>
+            <div class="option" onclick="setType('truck', this)">🚛 Yuk mashina</div>
+            <div class="option" onclick="setType('van', this)">🚐 Furgon</div>
+            <div class="option" onclick="setType('drift', this)">💨 Drift (Sirpanchiq)</div>
+        </div>
+
+        <p class="selector-title">RANGNI TANLANG:</p>
+        <div class="grid" id="colorGrid">
+            <div class="option active" onclick="setColor('#e74c3c', this)">Qizil</div>
+            <div class="option" onclick="setColor('#2d3436', this)">Qora</div>
+            <div class="option" onclick="setColor('#ff69b4', this)">Pushti</div>
+            <div class="option" onclick="setColor('#f1c40f', this)">Sariq</div>
+        </div>
+
+        <button class="btn-start" onclick="startGame()">IMTIHONNI BOSHLASH</button>
+    </div>
+
+    <canvas id="raceCanvas" width="400" height="600"></canvas>
+
+    <div id="license">
+        <h2 id="resultMsg">MUVAFFAQIYAT!</h2>
+        <div style="text-align: left; background: #f9f9f9; padding: 15px; border-radius: 10px; margin-bottom: 10px;">
+            <p><b>HAYDOVCHI:</b> <span id="finalName">...</span></p>
+            <p><b>MASHINA:</b> <span id="finalType">...</span></p>
+            <p><b>STATUS:</b> <span id="finalStatus">O'TDI ✅</span></p>
+        </div>
+        <button class="btn-start" style="font-size: 1rem;" onclick="location.reload()">QAYTADAN</button>
+    </div>
+
+<script>
+    const canvas = document.getElementById("raceCanvas");
+    const ctx = canvas.getContext("2d");
+    let selectedColor = '#e74c3c', selectedType = 'sport', gameActive = false, timeLeft = 30;
+    let car = { x: 180, y: 480, w: 40, h: 80 };
+    let obstacles = [], roadLines = [0, 200, 400], finishY = -150;
+    let driftOffset = 0, driftDir = 1;
+
+    function setType(type, el) {
+        selectedType = type;
+        document.querySelectorAll('#typeGrid .option').forEach(opt => opt.classList.remove('active'));
+        el.classList.add('active');
+        if(type === 'truck') { car.w = 50; car.h = 110; }
+        else if(type === 'van') { car.w = 48; car.h = 95; }
+        else { car.w = 44; car.h = 85; }
+    }
+
+    function setColor(color, el) {
+        selectedColor = color;
+        document.querySelectorAll('#colorGrid .option').forEach(opt => opt.classList.remove('active'));
+        el.classList.add('active');
+    }
+
+    function startGame() {
+        if(!document.getElementById("userName").value) return alert("Ismingizni kiriting!");
+        document.getElementById("start-screen").style.display = "none";
+        document.getElementById("timer-display").style.display = "block";
+        canvas.style.display = "block";
+        gameActive = true;
+        setInterval(() => { if(timeLeft > 0) timeLeft--; document.getElementById("seconds").innerText = timeLeft; }, 1000);
+        spawn(); render();
+    }
+
+    function spawn() {
+        if(gameActive && timeLeft > 3) {
+            obstacles.push({ x: 60 + Math.random()*240, y: -100, w: 40, h: 40 });
+            setTimeout(spawn, 900);
+        }
+    }
+
+    canvas.addEventListener("mousemove", (e) => {
+        let r = canvas.getBoundingClientRect();
+        car.targetX = e.clientX - r.left - car.w/2;
+    });
+
+    function render() {
+        if(!gameActive) return;
+        ctx.clearRect(0,0,400,600);
+
+        // Drift effekti
+        if(selectedType === 'drift') {
+            driftOffset += 2 * driftDir;
+            if(Math.abs(driftOffset) > 15) driftDir *= -1;
+        } else { driftOffset = 0; }
+
+        car.x = car.targetX + driftOffset;
+        if(car.x < 55) car.x = 55;
+        if(car.x > 345 - car.w) car.x = 345 - car.w;
+
+        // Yo'l
+        ctx.fillStyle = "#27ae60"; ctx.fillRect(0,0,55,600); ctx.fillRect(345,0,55,600);
+        ctx.fillStyle = "white";
+        roadLines.forEach((l, i) => { ctx.fillRect(195, l, 10, 60); roadLines[i] += 8; if(l > 600) roadLines[i] = -100; });
+
+        if(timeLeft <= 0) {
+            finishY += 8;
+            for(let i=0; i<10; i++) { ctx.fillStyle = i%2==0 ? "white" : "black"; ctx.fillRect(55 + i*29, finishY, 29, 30); }
+            if(finishY > car.y) end(true);
+        }
+
+        ctx.fillStyle = "#e67e22";
+        obstacles.forEach((o, i) => {
+            o.y += 8;
+            ctx.beginPath(); ctx.moveTo(o.x+20, o.y); ctx.lineTo(o.x, o.y+40); ctx.lineTo(o.x+40, o.y+40); ctx.fill();
+            if(car.x < o.x+35 && car.x+car.w > o.x && car.y < o.y+35 && car.y+car.h > o.y) end(false);
+            if(o.y > 600) obstacles.splice(i, 1);
+        });
+
+        drawVehicle(car.x, car.y);
+        requestAnimationFrame(render);
+    }
+
+    function drawVehicle(x, y) {
+        ctx.fillStyle = "#111"; // Balonlar
+        ctx.fillRect(x-4, y+10, 6, 20); ctx.fillRect(x+car.w-2, y+10, 6, 20);
+        ctx.fillRect(x-4, y+car.h-30, 6, 20); ctx.fillRect(x+car.w-2, y+car.h-30, 6, 20);
+
+        ctx.fillStyle = selectedColor;
+        if(selectedType === 'truck') {
+            ctx.fillRect(x, y+70, car.w, 40); // Kabina
+            ctx.fillStyle = "#555"; ctx.fillRect(x, y, car.w, 70); // Kuzov
+        } else if(selectedType === 'van') {
+            ctx.beginPath(); ctx.roundRect(x, y, car.w, car.h, 5); ctx.fill();
+            ctx.fillStyle = "rgba(0,0,0,0.2)"; ctx.fillRect(x+5, y+70, car.w-10, 5); // Usti
+        } else {
+            ctx.beginPath(); ctx.roundRect(x, y, car.w, car.h, 12); ctx.fill();
+            ctx.fillStyle = "rgba(255,255,255,0.3)"; ctx.fillRect(x+5, y+20, car.w-10, 20); // Oyna
+        }
+        
+        // Farlar
+        ctx.fillStyle = "white"; ctx.fillRect(x+5, y+2, 8, 4); ctx.fillRect(x+car.w-13, y+2, 8, 4);
+    }
+
+    function end(win) {
+        gameActive = false; canvas.style.display = "none";
+        document.getElementById("timer-display").style.display = "none";
+        document.getElementById("license").style.display = "block";
+        document.getElementById("finalName").innerText = document.getElementById("userName").value.toUpperCase();
+        document.getElementById("finalType").innerText = selectedType.toUpperCase();
+        if(!win) { document.getElementById("resultMsg").innerText = "YIQILDINGIZ!"; document.getElementById("resultMsg").style.color = "red"; document.getElementById("finalStatus").innerText = "URILISH ❌"; }
+    }
+</script>
+</body>
+</html>
